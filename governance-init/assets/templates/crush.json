@@ -1,0 +1,53 @@
+{
+  "$schema": "https://charm.land/crush.json",
+  "providers": {
+    "deepseek": {
+      "type": "openai-compat",
+      "name": "DeepSeek",
+      "base_url": "https://api.deepseek.com/v1",
+      "api_key": "$DEEPSEEK_API_KEY",
+      "models": [
+        {
+          "id": "deepseek-chat",
+          "name": "DeepSeek-V3",
+          "cost_per_1m_in": 0.27,
+          "cost_per_1m_out": 1.10,
+          "cost_per_1m_in_cached": 0.07,
+          "context_window": 64000
+        }
+      ]
+    },
+    "google-gemini": {
+      "type": "gemini",
+      "name": "Google Gemini",
+      "api_key": "$GEMINI_API_KEY",
+      "models": [
+        {
+          "id": "gemini-2.0-flash-lite",
+          "name": "Gemini 2.0 Flash-Lite",
+          "cost_per_1m_in": 0.075,
+          "cost_per_1m_out": 0.30
+        }
+      ]
+    },
+    "openrouter": {
+      "type": "openai-compat",
+      "name": "OpenRouter",
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key": "$OPENROUTER_API_KEY",
+      "models": [
+        {
+          "id": "glm-4.6",
+          "name": "GLM-4.6",
+          "cost_per_1m_in": 0.50,
+          "cost_per_1m_out": 2.00
+        }
+      ]
+    }
+  },
+  "options": {
+    "theme": "dark",
+    "default_provider": "google-gemini",
+    "default_model": "gemini-2.0-flash-lite"
+  }
+}

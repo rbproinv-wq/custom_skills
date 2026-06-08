@@ -1,0 +1,33 @@
+# CRUSH RULES - Governance & Security
+
+## 1. Architectural Integrity
+- No cross-module coupling without an abstraction layer (interface / port).
+- All dependencies must be explicit and injected; avoid global state.
+- Follow Clean Architecture: entities -> use cases -> interface adapters -> frameworks.
+
+## 2. Input Validation & Data Sanitization
+- Every external input (user, file, network) must be validated using a structured schema (e.g., Pydantic, Zod, or equivalent) BEFORE entering the domain layer.
+- Never trust raw data; sanitize according to context (SQL, shell, HTML, etc.).
+
+## 3. Exception Handling
+- Do NOT swallow exceptions with empty catch blocks.
+- Log every exception with context (timestamp, function, input values truncated).
+- Use typed errors/custom exceptions rather than generic strings.
+
+## 4. Code Style & Quality
+- Maximum function length: 30 lines.
+- Maximum cyclomatic complexity per function: 7.
+- All public functions must have docstrings and type hints.
+- Unit tests must cover: happy path, edge cases, and error paths.
+
+## 5. Prompt Caching Discipline
+- The `# === BLOCO ESTÁVEL (CACHED) ===` section of `.crush.md` must remain identical across all requests in a session.
+- Any change to the stable block invalidates the cache for subsequent requests.
+
+## 6. Pre-Edit Check
+- Before editing any source file (e.g., `src/`), the agent MUST read the relevant `.spec/` file that describes the intended behavior.
+
+## 7. Cost Awareness
+- Prefer `gemini-flash-lite` for simple tasks (boilerplate, tests, docs).
+- Use `deepseek-chat` for business logic and complex refactors.
+- Only use `glm-4.6` (via OpenRouter) for security audits or algorithmic optimizations.
