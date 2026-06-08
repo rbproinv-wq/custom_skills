@@ -7,9 +7,17 @@
 - **Local path:** `/home/rb_dev/.agents/custom_skills/`
 
 ## Skills Configured for Next Session
-- **Keep enabled:** `skill-writer` (analysis/editing), `crush-config` (config)
-- **Disabled (not needed):** `skill-creator`, `manage-skills`, `10-andruia-skill-smith`, `templates`
-- **crush.json updated:** skills path fixed (`custom-skills` → `custom_skills`)
+- **Only skill available:** `skill-writer` (analysis/editing)
+- **Builtins:** `crush-config`, `crush-hooks`
+- **Custom skills in path:** `engine_spec`, `governance-init` (will NOT auto-load)
+- **1500+ community skills bloqueadas** — não aparecem mais no `<available_skills>`
+
+## Critical: Start Session From This Directory
+**`cd /home/rb_dev/.agents/custom_skills/`** before starting Crush.
+
+The project-level `.crush.json` overrides the global `skills.paths` to only include:
+- `/home/rb_dev/.agents/clean-skills/` (only `skill-writer`)
+- `/home/rb_dev/.agents/custom_skills/` (our skills under development)
 
 ## What Was Done So Far
 
@@ -50,6 +58,11 @@ custom_skills/
 - Skills path updated to `custom_skills`
 
 ## Next Steps (When Session Resumes)
+**Before starting Crush:**
+1. `cd /home/rb_dev/.agents/custom_skills/`
+2. Start Crush (project-level `.crush.json` will filter skills)
+
+**In the session:**
 1. Load `skill-writer` references:
    - `references/mode-selection.md`
    - `references/design-principles.md`

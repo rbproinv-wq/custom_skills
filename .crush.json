@@ -1,0 +1,17 @@
+{
+  "$schema": "https://charm.land/crush.json",
+  "skills": {
+    "paths": [
+      "/home/rb_dev/.agents/clean-skills",
+      "/home/rb_dev/.agents/custom_skills"
+    ]
+  },
+  "options": {
+    "disabled_skills": [
+      "skill-creator",
+      "manage-skills",
+      "10-andruia-skill-smith",
+      "templates"
+    ]
+  }
+}
