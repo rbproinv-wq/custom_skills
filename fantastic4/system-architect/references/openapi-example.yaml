@@ -1,0 +1,226 @@
+openapi: 3.0.0
+info:
+  title: Exemplo de API para Skill 3 - Sistema de Agendamento
+  description: |
+    Contratos de API para o sistema de agendamento via WhatsApp (exemplo ilustrativo).
+    A Skill 3 deve gerar contratos similares baseados no PRD e Dossiê.
+  version: 1.0.0
+servers:
+  - url: https://api.exemplo.com/v1
+    description: Servidor de produção
+
+paths:
+  /webhook/whatsapp:
+    post:
+      summary: Recebe mensagens do WhatsApp via webhook
+      description: |
+        Endpoint público chamado pela Meta WhatsApp API sempre que uma mensagem é recebida.
+        Deve responder rapidamente ( < 15s ) e processar de forma assíncrona.
+      operationId: handleWhatsAppWebhook
+      parameters:
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Assinatura SHA256 do corpo da requisição para validação
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsAppWebhookPayload'
+            examples:
+              mensagem_texto:
+                summary: Exemplo de mensagem de texto
+                value:
+                  object: "whatsapp_business_account"
+                  entry:
+                    - id: "123456"
+                      changes:
+                        - value:
+                            messaging_product: "whatsapp"
+                            metadata:
+                              display_phone_number: "5511999999999"
+                              phone_number_id: "987654"
+                            contacts:
+                              - profile:
+                                  name: "João Silva"
+                                wa_id: "5511988888888"
+                            messages:
+                              - from: "5511988888888"
+                                id: "wamid.ABC123"
+                                timestamp: "1651234567"
+                                text:
+                                  body: "Quero agendar uma consulta"
+                                type: "text"
+      responses:
+        '202':
+          description: Mensagem aceita para processamento assíncrono
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "accepted"
+                  message_id:
+                    type: string
+                    example: "wamid.ABC123"
+        '400':
+          description: Requisição malformada ou assinatura inválida
+        '409':
+          description: Mensagem duplicada (idempotência bloqueou)
+        '500':
+          description: Erro interno
+
+  /agendamentos:
+    post:
+      summary: Cria um novo agendamento (via dashboard ou API interna)
+      operationId: createAgendamento
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgendamentoRequest'
+      responses:
+        '201':
+          description: Agendamento criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgendamentoResponse'
+        '400':
+          description: Dados inválidos
+        '409':
+          description: Horário já ocupado
+
+    get:
+      summary: Lista agendamentos com filtros
+      operationId: listAgendamentos
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: paciente_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filtrar por paciente
+        - name: data_inicio
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Data inicial (YYYY-MM-DD)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pendente, confirmado, cancelado, realizado]
+      responses:
+        '200':
+          description: Lista de agendamentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgendamentoResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT para acesso às APIs autenticadas
+
+  schemas:
+    WhatsAppWebhookPayload:
+      type: object
+      properties:
+        object:
+          type: string
+          example: "whatsapp_business_account"
+        entry:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              changes:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    value:
+                      type: object
+                      properties:
+                        messaging_product:
+                          type: string
+                        metadata:
+                          type: object
+                        contacts:
+                          type: array
+                        messages:
+                          type: array
+      required:
+        - object
+        - entry
+
+    CreateAgendamentoRequest:
+      type: object
+      properties:
+        paciente_id:
+          type: string
+          format: uuid
+          description: ID do paciente (já existente)
+        especialidade:
+          type: string
+          example: "Cardiologia"
+        data_hora:
+          type: string
+          format: date-time
+          example: "2026-06-15T14:30:00-03:00"
+        observacoes:
+          type: string
+          maxLength: 500
+      required:
+        - paciente_id
+        - especialidade
+        - data_hora
+
+    AgendamentoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        paciente_id:
+          type: string
+          format: uuid
+        paciente_nome:
+          type: string
+        especialidade:
+          type: string
+        data_hora:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pendente, confirmado, cancelado, realizado]
+        created_at:
+          type: string
+          format: date-time
+
+tags:
+  - name: Webhooks
+    description: Endpoints para receber eventos externos (WhatsApp)
+  - name: Agendamentos
+    description: CRUD de consultas agendadas
