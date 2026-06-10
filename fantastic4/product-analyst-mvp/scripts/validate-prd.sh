@@ -29,6 +29,8 @@ SECTIONS=(
     "## Personas e tipos de usuários"
     "## Escopo do MVP"
     "## Métricas de sucesso"
+    "## Custo estimado"
+    "## Riscos e premissas"
     "## Metodologia utilizada"
     "## Próximos passos"
 )

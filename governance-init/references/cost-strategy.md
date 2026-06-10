@@ -1,14 +1,11 @@
-# Cost Strategy & Prompt Caching Guide (June 2026)
+# Cost Strategy & Prompt Caching Guide
 
-## Official Model Pricing (per 1M tokens)
+> ⚠️ **Prices change frequently — verify at provider docs before relying.**
 
-| Model                  | Input ($) | Output ($) | Cache Hit ($) | Context Window |
-|------------------------|-----------|------------|---------------|----------------|
-| Gemini 2.0 Flash-Lite  | 0.075     | 0.30       | ~0.01*        | 1M             |
-| DeepSeek-V3            | 0.27      | 1.10       | 0.07 (90% off) | 64K (128K API) |
-| GLM-4.6 (via OpenRouter) | 0.50   | 2.00       | ~0.05*        | 128K           |
+Consulte `maestro-skills/references/llm-routing.md` para a tabela mais atualizada de
+modelos, preços e roteamento. Este documento cobre conceitos gerais de cache.
 
-*Estimated – actual cache discounts may vary by provider.
+---
 
 ## How Prompt Caching Works
 
@@ -18,7 +15,7 @@
 
 ## To Maximize Cache Savings (Structured Prompt Template)
 
-Place **ALL stable content** at the **very beginning** of your prompt. Example:
+Place **ALL stable content** at the **very beginning** of your prompt:
 
 ```markdown
 # === BLOCO ESTÁVEL (CACHED) ===
@@ -44,18 +41,24 @@ Implement a login endpoint.
 1. Keep `.crush.md` stable block identical across sessions.
 2. Use the same Crush session for related tasks.
 3. Avoid changing the system prompt mid-session unless necessary.
-4. For DeepSeek-V3, explicit cache hits are applied automatically – no extra config needed.
+4. For DeepSeek-V3, explicit cache hits are applied automatically — no extra config needed.
 
-## Routing Guidelines (Cost Optimization)
+## BFRI Scoring (Optional Governance Metric)
 
-| Task Complexity | Recommended Model              | Approx Cost (per 10K tokens) |
-|----------------|--------------------------------|-------------------------------|
-| Boilerplate, docs, tests | Gemini 2.0 Flash-Lite | $0.00075                      |
-| Business logic, CRUD      | DeepSeek-V3                  | $0.0027                       |
-| Security audit, complex algorithm | GLM-4.6 (OpenRouter) | $0.005                        |
+O **Backend Feasibility & Risk Index** (BFRI) avalia o projeto em 5 dimensões:
+
+| Dimension | Scale | What It Measures |
+|-----------|-------|-----------------|
+| Architectural Fit | 1-5 | How well the stack matches requirements |
+| Business Logic Complexity | 1-5 | How complex the core domain logic is |
+| Data Risk | 1-5 | Sensitivity and volume of data |
+| Operational Risk | 1-5 | Deployment, monitoring, compliance burden |
+| Testability | 1-5 | How easy to test critically |
+
+Use BFRI como gate pós-init para avaliar se o projeto está maduro para começar.
 
 ## References
 
-- DeepSeek Cache Documentation: https://api-docs.deepseek.com/cache
+- DeepSeek Cache: https://api-docs.deepseek.com/cache
 - Anthropic Prompt Caching: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
-- arXiv paper "Don't Break the Cache" (2601.05871)
+- arXiv "Don't Break the Cache" (2601.05871)

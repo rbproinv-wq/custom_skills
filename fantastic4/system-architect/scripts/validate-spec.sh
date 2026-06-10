@@ -22,17 +22,18 @@ echo "======================================"
 MISSING_REQUIREMENTS=0
 WARNINGS=0
 
-# Seções obrigatórias (títulos de nível 2)
+# Seções obrigatórias (títulos nível 3 com numeração 5.X conforme Output Format)
 SECTIONS=(
-    "## Architecture Overview"
-    "## C4 Model"
-    "## Data Modeling"
-    "## API Contracts"
-    "## Architecture Decision Records"
-    "## Security & Resilience"
-    "## Technology Stack"
-    "## Observability"
-    "## Next Steps"
+    "### 5.1. Header"
+    "### 5.2. Architecture Overview"
+    "### 5.3. C4 Model"
+    "### 5.4. Data Modeling"
+    "### 5.5. API Contracts"
+    "### 5.6. Architecture Decision Records"
+    "### 5.7. Security & Resilience"
+    "### 5.9. Technology Stack"
+    "### 5.10. Observability"
+    "### 5.11. Next Steps"
 )
 
 for section in "${SECTIONS[@]}"; do
@@ -43,6 +44,14 @@ for section in "${SECTIONS[@]}"; do
         MISSING_REQUIREMENTS=$((MISSING_REQUIREMENTS + 1))
     fi
 done
+
+# Seção opcional (condicional, não falha se ausente)
+if grep -q "^### 5\\.8\\. Optional Modules" "$SPEC_FILE"; then
+    echo "✅ ### 5.8. Optional Modules (presente)"
+else
+    echo "⚠️  ### 5.8. Optional Modules (não gerada — opcional, ignorando)"
+    WARNINGS=$((WARNINGS + 1))
+fi
 
 # Verifica C4 com 3 níveis (procura por diagramas Mermaid)
 C4_CONTENT=$(grep -c "\`\`\`mermaid" "$SPEC_FILE" || true)

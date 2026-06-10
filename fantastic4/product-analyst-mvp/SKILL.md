@@ -1,12 +1,27 @@
 ---
 name: product-analyst-mvp
+source: custom
 description: Act as a senior Product Analyst to transform raw software ideas into a structured PRD and MVP scope. Use when the user provides an initial software concept (vague or detailed) and needs problem definition, personas, prioritized features, success metrics, and cost estimation. Do NOT use for technical architecture, database design, or code generation.
 license: MIT
 metadata:
   author: pipeline-specialist
   version: "1.0"
   stage: "skill-1-of-4"
-allowed-tools: read, write, ask_user
+allowed-tools: read, write
+pipeline:
+  phase: 1
+  label: "PRD"
+  next: tech-scout
+  prev: governance-init
+  optional: false
+  consumes:
+    - artifact: .spec/project-config.md
+      from: governance-init
+  produces:
+    - artifact: .spec/prd.md
+  gate:
+    type: interview
+    prompt: "Entreviste o usuário: escopo, personas, dores, MVP"
 ---
 # Product Analyst & MVP Scope
 
@@ -17,7 +32,7 @@ You are the **first agent** in a 4-agent specification-driven engineering pipeli
 - User describes a new software product, feature, or script idea.
 - User asks to "define the product scope", "create a PRD", or "plan the MVP".
 - User provides a vague concept like "build an app for X" without clear requirements.
-- You need to produce an artifact that will be consumed by a technical researcher (Skill 2) and architect (Skill 3).
+- You need to produce an artifact that will be consumed by a tech-scout (Skill 2 — pesquisa tecnológica), system-architect (Skill 3), e context-engineer (Skill 4). Opcionalmente, pode passar por domain-researcher antes.
 
 ## Core Process (Structured Workflow)
 
@@ -66,18 +81,18 @@ Otherwise write "Not estimated due to lack of data".
 ### Step 6: Generate the PRD Document
 Produce a Markdown document with **exactly the sections** listed below. Use headings (`##`, `###`) and lists. Keep the entire document **under 200 lines** (progressive disclosure – details can be moved to `references/` if needed, but this skill should output a self-contained PRD).
 
-**Required sections:**
+**Required sections (em português):**
 1. **Header** (Project title, date, version 0.1)
-2. **Problem identified** (specific, measurable pain)
-3. **Proposed solution** (one or two sentences)
-4. **Main features (prioritized)** – split into MVP and Post-MVP
-5. **Personas & user types** (table or list)
-6. **MVP scope executive summary** (what's in, success criteria)
-7. **Initial success metrics (KPIs)** – at least 3
-8. **Cost estimate** (table or "Not estimated")
-9. **Risks and assumptions** (list any made)
-10. **Methodology used** (e.g., "Lean Canvas")
-11. **Next steps** (handoff to Skill 2 – Technical Researcher)
+2. **Problema identificado** (specific, measurable pain)
+3. **Solução proposta** (one or two sentences)
+4. **Funcionalidades principais** – split into MVP and Post-MVP
+5. **Personas e tipos de usuários** (table or list)
+6. **Escopo do MVP** (what's in, success criteria)
+7. **Métricas de sucesso** – at least 3 KPIs
+8. **Custo estimado** (table or "Não estimado")
+9. **Riscos e premissas** (list any assumptions made)
+10. **Metodologia utilizada** (e.g., "Lean Canvas")
+11. **Próximos passos** (handoff to Skill 2 – tech-scout para pesquisa tecnológica; depois Skill 3 – system-architect para arquitetura)
 
 ### Step 7: Verification & Self-Check
 Before outputting the final document, verify:

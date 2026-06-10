@@ -27,7 +27,9 @@ SECTIONS=(
     "## Legal & Compliance Constraints"
     "## API & Platform Restrictions"
     "## Channel Analysis"
+    "## Design/UX Inspirations"
     "## Identified Risks & Opportunities"
+    "## Unresolved Gaps"
     "## Research Methodology"
 )
 

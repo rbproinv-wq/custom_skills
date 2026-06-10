@@ -2,6 +2,8 @@
 disable-model-invocation: true
 name: framework-nocode-startup
 description: "Guia founders nao-tecnicos do zero ao MVP funcional via Vibe Coding. Framework NoCode StartUp AI em 2 fases e 7 etapas: Visao, Mercado, Processos, Arquitetura, Dados, Criacao, Lancamento. Gera Documento Padrao progressivo com saidas deterministicas e criterios de saida por etapa."
+version: "1.0"
+user-invokable: true
 risk: safe
 source: community
 date_added: "2026-06-05"

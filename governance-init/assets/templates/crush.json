@@ -1,53 +1,103 @@
 {
   "$schema": "https://charm.land/crush.json",
   "providers": {
-    "deepseek": {
+    "llm-router": {
       "type": "openai-compat",
-      "name": "DeepSeek",
-      "base_url": "https://api.deepseek.com/v1",
-      "api_key": "$DEEPSEEK_API_KEY",
+      "name": "LLM Router (planning paid + coding free)",
+      "base_url": "http://localhost:8443/v1",
+      "api_key": "router-managed",
       "models": [
         {
-          "id": "deepseek-chat",
-          "name": "DeepSeek-V3",
-          "cost_per_1m_in": 0.27,
-          "cost_per_1m_out": 1.10,
-          "cost_per_1m_in_cached": 0.07,
-          "context_window": 64000
-        }
-      ]
-    },
-    "google-gemini": {
-      "type": "gemini",
-      "name": "Google Gemini",
-      "api_key": "$GEMINI_API_KEY",
-      "models": [
+          "id": "gemini-2.5-pro",
+          "name": "Gemini 2.5 Pro — planejamento (pago)",
+          "cost_per_1m_in": 1.50,
+          "cost_per_1m_out": 10.00,
+          "cost_per_1m_in_cached": 0.75,
+          "cost_per_1m_out_cached": 5.00,
+          "context_window": 1048576,
+          "can_reason": true,
+          "default_max_tokens": 8192,
+          "supports_attachments": true
+        },
         {
-          "id": "gemini-2.0-flash-lite",
-          "name": "Gemini 2.0 Flash-Lite",
-          "cost_per_1m_in": 0.075,
-          "cost_per_1m_out": 0.30
-        }
-      ]
-    },
-    "openrouter": {
-      "type": "openai-compat",
-      "name": "OpenRouter",
-      "base_url": "https://openrouter.ai/api/v1",
-      "api_key": "$OPENROUTER_API_KEY",
-      "models": [
+          "id": "gemini-2.0-flash",
+          "name": "Gemini 2.0 Flash — planejamento (pago)",
+          "cost_per_1m_in": 0.10,
+          "cost_per_1m_out": 0.40,
+          "cost_per_1m_in_cached": 0.05,
+          "cost_per_1m_out_cached": 0.20,
+          "context_window": 1048576,
+          "can_reason": false,
+          "default_max_tokens": 8192,
+          "supports_attachments": true
+        },
         {
-          "id": "glm-4.6",
-          "name": "GLM-4.6",
-          "cost_per_1m_in": 0.50,
-          "cost_per_1m_out": 2.00
+          "id": "deepseek/deepseek-v4-flash",
+          "name": "DeepSeek V4 Flash — planejamento (pago)",
+          "cost_per_1m_in": 0.14,
+          "cost_per_1m_out": 0.28,
+          "cost_per_1m_in_cached": 0.04,
+          "cost_per_1m_out_cached": 0.08,
+          "context_window": 1048576,
+          "can_reason": true,
+          "default_max_tokens": 8192,
+          "supports_attachments": false
+        },
+        {
+          "id": "deepseek/deepseek-v4-flash:free",
+          "name": "DeepSeek V4 Flash Free — codificação (free OR)",
+          "cost_per_1m_in": 0.0,
+          "cost_per_1m_out": 0.0,
+          "cost_per_1m_in_cached": 0.0,
+          "cost_per_1m_out_cached": 0.0,
+          "context_window": 1048576,
+          "can_reason": true,
+          "default_max_tokens": 4096,
+          "supports_attachments": false
+        },
+        {
+          "id": "qwen/qwen3-coder:free",
+          "name": "Qwen 3 Coder Free — codificação (free OR)",
+          "cost_per_1m_in": 0.0,
+          "cost_per_1m_out": 0.0,
+          "cost_per_1m_in_cached": 0.0,
+          "cost_per_1m_out_cached": 0.0,
+          "context_window": 1048576,
+          "can_reason": false,
+          "default_max_tokens": 4096,
+          "supports_attachments": false
+        },
+        {
+          "id": "big-pickle",
+          "name": "Big Pickle — codificação (free OpenCode Zen)",
+          "cost_per_1m_in": 0.0,
+          "cost_per_1m_out": 0.0,
+          "cost_per_1m_in_cached": 0.0,
+          "cost_per_1m_out_cached": 0.0,
+          "context_window": 200000,
+          "can_reason": true,
+          "default_max_tokens": 32768,
+          "supports_attachments": false
+        },
+        {
+          "id": "openrouter/free",
+          "name": "OpenRouter Free Router — fallback codificação",
+          "cost_per_1m_in": 0.0,
+          "cost_per_1m_out": 0.0,
+          "cost_per_1m_in_cached": 0.0,
+          "cost_per_1m_out_cached": 0.0,
+          "context_window": 200000,
+          "can_reason": false,
+          "default_max_tokens": 4096,
+          "supports_attachments": true
         }
       ]
     }
   },
+  "skills_paths": ["./custom_skills"],
   "options": {
     "theme": "dark",
-    "default_provider": "google-gemini",
-    "default_model": "gemini-2.0-flash-lite"
+    "default_provider": "llm-router",
+    "default_model": "deepseek/deepseek-v4-flash:free"
   }
 }

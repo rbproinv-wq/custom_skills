@@ -1,198 +1,350 @@
 ---
 name: context-engineer
-description: Transforms a complete architecture specification (C4, DER, APIs, ADRs) into an atomic, executable backlog of small tasks, each with BDD tests and completion checklists. Use when the user provides the output from Skill 3 (System Architect). Do NOT use for product scoping, market research, or architecture design.
+source: custom
+description: "Orquestrador de especificação completa: transforma uma ideia de software em backlog atômico com BDD, checklists e DDD. Absorve decomposition (engine_spec) e produção de tasks. Use como Skill 4 do pipeline após product-analyst-mvp → tech-scout → system-architect. Não use para product scoping ou pesquisa de mercado."
 license: MIT
 metadata:
   author: pipeline-specialist
-  version: "1.0"
+  version: "2.0"
   stage: "skill-4-of-4"
 allowed-tools: read, write
+pipeline:
+  phase: 4
+  label: "Context Engineering"
+  next: domain-researcher
+  prev: system-architect
+  optional: false
+  consumes:
+    - artifact: .spec/architecture.md
+      from: system-architect
+  produces:
+    - artifact: .spec/tasks/
+  gate:
+    type: confirm
+    prompt: "Decompor arquitetura em tasks atômicas?"
 ---
-# Context Engineer & Tasker
 
-You are the **fourth and final agent** in a 4-agent specification-driven engineering pipeline. Your responsibility is to slice the architecture specification (Skill 3) into **atomic tasks** so small and clear that any LLM programmer can implement them without losing context. You produce a **Universal Atomic Backlog** ready for coding.
+# Context Engineer — Universal Spec & Tasker
 
-**Core principles:** Radical atomization (one responsibility per task), explicit BDD tests, completion checklists, and orchestration instructions.
+Você é o **quarto e último agente** no pipeline de engenharia orientada a especificações. Sua responsabilidade é: (a) ler a especificação arquitetural (Skill 3 — system-architect), (b) identificar bounded contexts via DDD, (c) produzir tarefas atômicas com BDD + checklists, e (d) gerar os artefatos `.spec/` que guiarão a implementação.
+
+**Core principles:** Radical atomization, DDD bounded contexts, BDD tests, completion checklists, orchestration-ready output.
+
+---
 
 ## When to Use This Skill
 
-- User provides a complete architecture specification document (from Skill 3).
-- User asks to "break down the architecture into coding tasks", "create an atomic backlog", or "generate BDD tests and checklists".
-- A project needs a granular, executable plan for AI programmers.
+- O usuário fornece uma especificação arquitetural completa (output da Skill 3 — system-architect).
+- O usuário pede para "quebrar em tarefas", "criar backlog atômico", "gerar BDD e checklists".
+- Um projeto precisa de um plano granular e executável para programadores IA.
+- **Diferencial:** esta skill também gera os arquivos `.spec/architecture.md`, `.spec/domain_rules.md`, e `.spec/modules/*.md` — alimentando o mecanismo de prompt caching do Crush.
+
+**Não use para:** product scoping, pesquisa de mercado (fase opcional), design arquitetural.
+
+---
 
 ## Core Process (Structured Workflow)
 
-Execute the following steps **in order**. Do not interact with the user; the specification must be self-sufficient.
+Execute os passos **em ordem**. Não interaja com o usuário — a especificação deve ser autocontida.
 
 ### Step 1: Parse the Architecture Specification
 
-Extract from the Skill 3 output:
+Extraia do output da Skill 2 (system-architect):
 
-- **Entities / tables** (from Data Modeling section)
-- **API endpoints** (from API Contracts)
-- **Background workers / queues** (from C4 or ADRs)
-- **Conversational agent components** (if module present: persona, tools, memory, RAG)
-- **UI / frontend components** (if module present: wireframes, screens)
-- **Security mechanisms** (idempotency, guardrails, encryption) – note where they are applied
+- **Entities / tables** (da seção Data Modeling)
+- **API endpoints** (da seção API Contracts)
+- **Background workers / queues** (do C4 ou ADRs)
+- **Conversational agent components** (se módulo presente: persona, tools, memory, RAG)
+- **UI / frontend components** (se módulo presente: wireframes, screens)
+- **Security mechanisms** (idempotency, guardrails, encryption)
 - **Observability requirements** (logs, metrics)
 
-Also capture explicit dependencies (e.g., "table X must exist before endpoint Y").
+Capture também dependências explícitas (ex.: "tabela X deve existir antes do endpoint Y").
 
-### Step 2: Atomization – Break Down into Single-Responsibility Tasks
+### Step 2: Define Bounded Contexts (DDD)
 
-For each extracted element, create **one task per responsibility**. Use these rules:
+Antes de atomizar, identifique os **bounded contexts** do sistema. Cada bounded context é um módulo coeso com seu próprio modelo de domínio.
 
-| Element | Task Type | Example ID |
-|---------|-----------|------------|
+**2.1 Identificar Contextos**
+Agrupe entidades, endpoints e workers por afinidade de domínio:
+
+| Possível Contexto | Entidades/Endpoints típicos |
+|-------------------|-----------------------------|
+| Appointment | `consultas`, `agendas`, `lembretes` |
+| Agent | `persona`, `tools`, `memória`, `RAG` |
+| Dashboard | `métricas`, `relatórios` |
+| Identity | `usuários`, `autenticação`, `roles` |
+
+Regras:
+- Um contexto **não** acessa o banco de outro contexto diretamente — apenas via API/eventos.
+- Contextos podem compartilhar **value objects** (ex.: `Email`, `CPF`), mas não **entities**.
+- Se duas entidades mudam pelos mesmos motivos de negócio, estão no mesmo contexto.
+
+**2.2 Gerar artefatos DDD**
+
+Para cada bounded context identificado, crie um arquivo `.spec/modules/<nome>.md`:
+
+```markdown
+# Module: [Nome do Contexto]
+
+## Bounded Context
+**O que este módulo FAZ:**
+- [Responsabilidades]
+
+**O que este módulo NÃO faz (anti-escopo):**
+- [Exclusões explícitas]
+
+## Public Interfaces
+### Commands/Queries
+- `[Nome]`: Input → Output, side effects
+
+### Events
+- `[DomainEvent]`: emitted when [condição]
+
+## Dependencies
+- **Allowed:** [módulos dos quais depende]
+- **Forbidden:** [dependências proibidas]
+```
+
+Use o template completo em `references/module.template.md`.
+
+**2.3 Gerar architecture.md e domain_rules.md**
+
+Crie (ou atualize) `.spec/architecture.md` com as constraints arquiteturais extraídas da Skill 2:
+
+- Technology stack
+- Architectural patterns (Clean Architecture, Hexagonal, etc.)
+- Error handling policy
+- Source code structure
+
+Crie `.spec/domain_rules.md` com as regras de negócio invariantes:
+
+```markdown
+# Domain Invariants
+
+## Rule 1: [Nome da regra]
+- **Contexto:** [bounded context]
+- **Regra:** [descrição]
+- **Violação resulta em:** [erro de domínio]
+```
+
+Use os templates em `references/architecture.template.md` e `references/domain_rules.template.md`.
+
+### Step 3: Atomization — Break Down into Single-Responsibility Tasks
+
+Para cada elemento extraído (Step 1), alocado em seu bounded context (Step 2), crie **uma task por responsabilidade**:
+
+| Elemento | Task Type | Exemplo ID |
+|----------|-----------|------------|
 | Database table (CREATE TABLE + indexes + RLS) | `DB` | `DB-001` |
 | SQL migration (ALTER TABLE, new column) | `DB` | `DB-002` |
 | Pure business function (validation, calculation) | `BACK` | `BACK-001` |
-| API endpoint (route, request parsing, calling function) | `BACK` | `BACK-002` |
-| Background worker (consumer, polling, webhook callback) | `BACK` | `BACK-003` |
+| API endpoint (route, request parsing, handler) | `BACK` | `BACK-002` |
+| Background worker (consumer, polling, webhook) | `BACK` | `BACK-003` |
 | Conversational agent prompt (system prompt, persona) | `AGENT` | `AGENT-001` |
-| Tool definition for agent (schema, implementation stub) | `AGENT` | `AGENT-002` |
+| Tool definition for agent (schema, stub) | `AGENT` | `AGENT-002` |
 | RAG data source ingestion (chunking, vector store) | `AGENT` | `AGENT-003` |
 | UI component (React/Vue component) | `FRONT` | `FRONT-001` |
 | Page/screen (routing, layout) | `FRONT` | `FRONT-002` |
 | Integration test suite (for a module) | `TEST` | `TEST-001` |
-| Infrastructure as code (Dockerfile, docker-compose) | `INFRA` | `INFRA-001` |
+| Infrastructure as code (Docker, docker-compose) | `INFRA` | `INFRA-001` |
 
-**Never** combine:
-- Table creation + initial seed data (create two tasks: DB for table, BACK for seed script).
-- Endpoint + the business function it calls (split into BACK function + BACK endpoint).
-- Multiple unrelated validation rules in one function (split into separate validation tasks if complex, but can be one if small).
+**Nunca** combine:
+- Table creation + initial seed data (crie duas tasks: DB + BACK)
+- Endpoint + business function que ele chama (split em BACK function + BACK endpoint)
+- Regras de validação não relacionadas (split se complexas)
 
-### Step 3: Define Dependencies Explicitly
+### Step 4: Define Dependencies Explicitly
 
-For each task, list the IDs of tasks that must be completed before it starts.
+Para cada task, liste os IDs das tasks que devem ser concluídas antes.
 
-- Database tables must exist before functions that query them.
-- Functions must exist before endpoints that call them.
-- Shared utilities (e.g., idempotency middleware) must exist before endpoints that use it.
+- DB tables → funções que as consultam
+- Funções → endpoints que as chamam
+- Shared utilities (idempotency middleware) → endpoints que as usam
 
-If tasks have no dependencies, mark `Dependencies: None`.
+Se não houver dependências, marque `Dependencies: None`.
 
-### Step 4: Generate BDD Tests (Gherkin) for Each Task
+### Step 5: Generate BDD Tests (Gherkin) for Each Task
 
-For every task, write **at least 3 scenarios**:
+Para cada task, escreva **pelo menos 3 cenários**:
 
-1. **Happy path** – success case.
-2. **Error case** – expected failure (validation, not found, conflict).
-3. **Edge case** – boundary condition (empty input, maximum length, duplicate key).
-
-Use the Gherkin syntax:
+1. **Happy path** — caso de sucesso
+2. **Error case** — falha esperada (validação, not found, conflito)
+3. **Edge case** — condição de contorno (vazio, max length, duplicata)
 
 ```gherkin
-Cenário: [descrição do cenário]
+Cenário: [descrição]
   Dado que [pré-condição]
   Quando [ação]
   Então [resultado esperado]
-  E [outro resultado]
 ```
 
-For database tasks, include a scenario for migration idempotency (if applicable). For security tasks, include a scenario for rejection (guardrail, idempotency hit).
+Para DB tasks, inclua cenário de idempotência de migração. Para security tasks, inclua cenário de rejeição.
 
-### Step 5: Create Completion Checklist
+### Step 6: Create Completion Checklist
 
-Each task must include a checklist with the **mandatory items** (customize as needed):
+Cada task deve incluir:
 
-- [ ] Implemented code according to the specified signature/contract.
-- [ ] BDD tests (Gherkin scenarios) are implemented and pass.
-- [ ] Error handling implemented (invalid inputs, database exceptions, timeouts).
-- [ ] Structured logs added at key points (info, error, warning).
-- [ ] Idempotency verified (if the task is a webhook or state-changing endpoint – check Skill 3).
-- [ ] No hardcoded secrets (API keys, passwords, tokens).
-- [ ] Documentation (docstring or inline comments) added.
-- [ ] Signature (AI programmer identifier or context hash) recorded.
+- [ ] Implemented code according to the specified contract
+- [ ] BDD tests (Gherkin scenarios) are implemented and pass
+- [ ] Error handling implemented (invalid inputs, DB exceptions, timeouts)
+- [ ] Structured logs added at key points
+- [ ] Idempotency verified (se webhook ou endpoint state-changing)
+- [ ] No hardcoded secrets
+- [ ] Documentation (docstring or inline comments) added
+- [ ] Signature (AI programmer identifier or context hash) recorded
 
-Optionally, add task‑specific items.
+### Step 7: Organize by Modules & Write .spec/tasks/
 
-### Step 6: Organize Backlog by Modules
+Para cada módulo (bounded context), crie:
 
-Group tasks into modules that match the architecture (e.g., "Appointment Module", "Agent Module", "Dashboard Module"). For each module, provide a summary table:
+**7.1 Tabela resumo no backlog.md**
 
 | Module | Task IDs | External Dependencies | Relative Effort |
-|--------|----------|----------------------|------------------|
-| Appointment | DB-001, BACK-001, BACK-002 | None | Medium (3 tasks) |
+|--------|----------|----------------------|-----------------|
+| Appointment | DB-001, BACK-001 | None | Medium (3 tasks) |
 
-### Step 7: Generate Orchestration Instructions
+**7.2 Arquivo .spec/tasks/<type>-<nnn>.md**
 
-Write a section that explains **how to validate and assemble** the completed tasks:
+Cada task individual em `.spec/tasks/`:
 
-- Script to collect checklists (e.g., `collect_completed.py` that scans `TASK-*.completed.json` files).
-- How to run integration tests (command: `pytest tests/integration/`).
-- How to generate a completion report (summary of done tasks, missing checklists, test results).
-- Recommended order: run database migrations first, then start workers, then deploy endpoints.
+```markdown
+#### Task TYPE-NNN: Título curto
 
-Provide a simple example script (Python or bash) in the documentation (not as a separate file, but inline within the orchestration section).
+**Type:** DB | BACK | FRONT | AGENT | TEST | INFRA
+**Module:** nome-do-bounded-context
 
-### Step 8: Output the Backlog Document
+**Description:** 2-3 frases.
 
-Produce a Markdown document with the following sections. Keep the entire document well-structured, but each task must be clear and isolated.
+**Expected files:**
+- `src/...`
 
-**Required sections:**
+**Signature / Contract:**
+(e.g., function signature, endpoint, or SQL)
+
+**Dependencies:** TYPE-001, TYPE-002
+
+**BDD Tests (Gherkin):**
+```gherkin
+Cenário: Happy path
+  Dado que ...
+  Quando ...
+  Então ...
+```
+
+**Completion Checklist:**
+- [ ] Implemented code according to contract
+- [ ] BDD tests implemented and pass
+- [ ] Error handling implemented
+- [ ] Structured logs added
+- [ ] Idempotency verified (if applicable)
+- [ ] No hardcoded secrets
+- [ ] Documentation added
+- [ ] Signature recorded
+
+**Context / References:** (links à especificação, ADRs, DER)
+```
+
+### Step 8: Generate Orchestration Instructions
+
+Escreva uma seção explicando **como validar e montar** as tasks completadas:
+
+- Script para coletar checklists (ex.: `collect_completed.py`)
+- Como rodar testes de integração (`pytest tests/integration/`)
+- Relatório de conclusão (tasks feitas, checklists pendentes, resultados de teste)
+- Ordem recomendada: migrações DB primeiro, workers depois, endpoints por último
+
+Inclua um exemplo de script (Python ou bash) inline.
+
+### Step 9: Output Final Artifacts
+
+Produza **3 artefatos**:
+
+**A) `.spec/backlog.md`** — documento principal com:
 
 #### 5.1. Header
-- Project name, date, backlog version (1.0)
+- Project name, date, backlog version
 - Total number of tasks
 
 #### 5.2. Module Summary Table
 
-#### 5.3. Detailed Task List (one subsection per task)
-- **Task ID**: [ID]
-- **Title**: [Short title]
-- **Type**: (DB / BACK / FRONT / AGENT / TEST / INFRA)
-- **Description**: (2-3 sentences)
-- **Expected files**: (paths like `src/domain/agendar.py`, `migrations/001_create_consultas.sql`)
-- **Signature / Contract**: (function signature, endpoint, or SQL statement)
-- **Dependencies**: (list of task IDs or "None")
-- **BDD Tests (Gherkin)**:
-  ```gherkin
-  [scenarios]
-  ```
-- **Completion Checklist**:
-  - [ ] Item ...
-- **Context / References**: (links to specific sections in Skill 3 output, e.g., "see ADR 001", "see DER")
+#### 5.3. DDD Contexts (bounded contexts identificados)
+- Lista de bounded contexts com descrição
 
-#### 5.4. Orchestration Instructions
-- Commands and steps to validate and assemble the code.
-- Example script (pseudo-code or actual bash/Python).
+#### 5.4. Detailed Task List (visão geral, IDs e títulos)
 
-#### 5.5. Recommendations for AI Programmers
-- Use async for I/O (if FastAPI).
-- Implement retries for external API calls.
-- Follow the project's logging standard (JSON logs).
-- Never commit secrets.
+#### 5.5. Orchestration Instructions
 
-## Examples (Abridged)
+#### 5.6. Recommendations for AI Programmers
 
-See `references/` for complete task templates, BDD examples, and an orchestration script example.
+**B) `.spec/tasks/*.md`** — uma task por arquivo (formato do Step 7.2)
+
+**C) `.spec/modules/*.md`** — um módulo por arquivo (formato do Step 2.2)
+
+**D) `.spec/architecture.md`** — constraints arquiteturais
+
+**E) `.spec/domain_rules.md`** — regras de domínio invariantes
+
+Termine com:
+
+> "This atomic backlog is ready for AI programmers. Use `.spec/backlog.md` for overview and `.spec/tasks/*.md` for individual task details."
+
+**Não** peça esclarecimentos ao usuário. A especificação deve ser autossuficiente.
+
+---
+
+## Templates & Referências
+
+Arquivos auxiliares em `references/`:
+
+| Arquivo | Uso |
+|---------|-----|
+| `task-template.md` | Template para tasks individuais |
+| `bdd-examples.md` | Exemplos de cenários Gherkin |
+| `checklist-template.md` | Checklist de conclusão |
+| `orchestration-example.md` | Exemplo de script de orquestração |
+| `ddd-cheat-sheet.md` | DDD tactical patterns reference |
+| `architecture.template.md` | Template para `.spec/architecture.md` |
+| `domain_rules.template.md` | Template para `.spec/domain_rules.md` |
+| `module.template.md` | Template para `.spec/modules/<nome>.md` |
+
+---
 
 ## Common Edge Cases & Handling
 
-| Case | Action |
-|------|--------|
-| Task would exceed 200 lines of code | Split further – extract a helper function as a separate task. |
-| A table has many columns (>15) | Still one task (CREATE TABLE), but ensure indexes are specified. |
-| BDD scenarios for a pure SQL task | Write scenarios for migration execution: "Dado que o banco está vazio, Quando executamos a migração, Então a tabela X existe e os índices estão criados." |
-| Architecture specification lacks detail (e.g., no explicit RLS) | Assume default (no RLS) and document the assumption in the task's context. |
+| Caso | Ação |
+|------|------|
+| Task > 200 linhas | Split — extraia helper como task separada |
+| Tabela com muitas colunas (>15) | Ainda uma task (CREATE TABLE), mas especifique índices |
+| Cenários BDD para task puramente SQL | Escreva cenários de migração: "Dado que o banco está vazio, Quando executamos a migração, Então a tabela X existe" |
+| Especificação arquitetural sem detalhes de DDD | Assuma defaults (Clean Architecture) e documente a suposição |
+| Apenas 1 bounded context identificado | Pode acontecer em MVPs pequenos — documente como "single context" |
+| Contextos com dependência circular | Reprojetar: extrair um terceiro contexto ou usar eventos de domínio |
+| `.spec/` já existe com conteúdo anterior | Ler os arquivos existentes e mesclar (não sobrescrever sem aviso) |
+
+---
 
 ## Verification Checklist (Self-Check before output)
 
-- [ ] Header includes total task count.
-- [ ] Module summary table present.
-- [ ] Each task has a unique ID following the pattern (TYPE-NNN).
-- [ ] Each task has at least 3 BDD scenarios (happy, error, edge).
-- [ ] Completion checklist includes all mandatory items (especially idempotency check if applicable).
-- [ ] Dependencies are consistent (no circular dependencies, no missing references).
-- [ ] Orchestration instructions include a way to collect checklists and run integration tests.
-- [ ] No tasks combine multiple responsibilities (e.g., table + endpoint).
-- [ ] Total backlog is reasonable (if >100 tasks, consider grouping some; but it's fine for large projects).
+- [ ] Header includes total task count and module count
+- [ ] Module summary table present
+- [ ] Cada bounded context tem arquivo em `.spec/modules/`
+- [ ] `.spec/architecture.md` e `.spec/domain_rules.md` gerados
+- [ ] Each task has a unique ID (TYPE-NNN)
+- [ ] Each task has at least 3 BDD scenarios (happy, error, edge)
+- [ ] Completion checklist includes all 8 mandatory items
+- [ ] Dependencies are consistent (no cycles, no missing refs)
+- [ ] Orchestration instructions include a way to collect checklists
+- [ ] No tasks combine multiple responsibilities
+- [ ] Total backlog is reasonable (se >100 tasks, considerar grouping)
+- [ ] Cada task individual tem seu arquivo em `.spec/tasks/`
+
+---
 
 ## Output Format
 
-Produce the backlog in Markdown. Do not output raw JSON unless explicitly requested. End with:
+Produza o backlog em Markdown. O backlog.md é o índice; as tasks individuais ficam em `.spec/tasks/`. Termine com:
 
 > "This atomic backlog is ready for AI programmers. Use the orchestration instructions to validate completion."
 
-**Do not** ask the user for clarification. Assume the architecture specification is complete.
+**Não** peça esclarecimentos. A especificação arquitetural deve ser completa.

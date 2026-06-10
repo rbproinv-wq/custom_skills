@@ -6,6 +6,18 @@
 - **Repo:** `rbproinv-wq/custom_skills` (PRIVATE) — `main` branch
 - **Local path:** `/home/rb_dev/.agents/custom_skills/`
 
+## Global Workflow Rules (CRÍTICO — Ler toda sessão)
+
+Sempre siga estas regras, em qualquer projeto:
+
+1. **PLANEJE PRIMEIRO** — Antes de qualquer `bash`, `edit`, `write` ou `multiedit`, apresente um plano completo do que será feito, incluindo:
+   - Arquivos que serão lidos/modificados/criados
+   - Abordagem técnica
+   - Riscos ou efeitos colaterais
+2. **PEÇA PERMISSÃO** — Só execute após meu "sim" explícito. Não presuma aprovação.
+3. **TASKS PEQUENAS** — Uma etapa por vez. Plano → aprovação → execução → verificação.
+4. **NUNCA faça alterações silenciosas** — Toda modificação deve ser anunciada e aprovada antes.
+
 ## Skills Configured for Next Session
 - **Only skill available:** `skill-writer` (analysis/editing)
 - **Builtins:** `crush-config`, `crush-hooks`

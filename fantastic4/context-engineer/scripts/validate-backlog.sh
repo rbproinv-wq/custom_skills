@@ -47,17 +47,32 @@ else
     WARNINGS=$((WARNINGS + 1))
 fi
 
-# Verifica se há pelo menos uma tarefa (padrão "#### Tarefa ")
-TASK_COUNT=$(grep -c "^#### Tarefa" "$BACKLOG_FILE" || true)
-if [ "$TASK_COUNT" -ge 1 ]; then
-    echo "✅ Pelo menos uma tarefa encontrada ($TASK_COUNT no total)"
+# Verifica .spec/tasks/ directory
+if [ -d ".spec/tasks" ]; then
+    TASK_COUNT=$(ls .spec/tasks/*.md 2>/dev/null | wc -l)
+    if [ "$TASK_COUNT" -ge 1 ]; then
+        echo "✅ Tasks individuais encontradas em .spec/tasks/ ($TASK_COUNT no total)"
+    else
+        echo "❌ .spec/tasks/ vazio ou sem arquivos .md"
+        MISSING_REQUIREMENTS=$((MISSING_REQUIREMENTS + 1))
+    fi
 else
-    echo "❌ Nenhuma tarefa encontrada (esperado padrão '#### Tarefa ...')"
-    MISSING_REQUIREMENTS=$((MISSING_REQUIREMENTS + 1))
+    # Fallback: verifica padrão de tarefas no backlog.md
+    TASK_COUNT=$(grep -c "^#### Task " "$BACKLOG_FILE" || true)
+    if [ "$TASK_COUNT" -ge 1 ]; then
+        echo "✅ Pelo menos uma tarefa encontrada no backlog ($TASK_COUNT no total)"
+    else
+        echo "❌ Nenhuma tarefa encontrada (esperado .spec/tasks/*.md ou '#### Task ...' no backlog)"
+        MISSING_REQUIREMENTS=$((MISSING_REQUIREMENTS + 1))
+    fi
 fi
 
 # Verifica IDs das tarefas (padrão TIPO-NNN)
-INVALID_IDS=$(grep "^#### Tarefa" "$BACKLOG_FILE" | grep -vE "Tarefa (DB|BACK|FRONT|AGENT|TEST|INFRA)-[0-9]{3}" | wc -l)
+if [ -d ".spec/tasks" ]; then
+    INVALID_IDS=$(ls .spec/tasks/*.md 2>/dev/null | grep -vE "(DB|BACK|FRONT|AGENT|TEST|INFRA)-[0-9]{3}" | wc -l)
+else
+    INVALID_IDS=$(grep "^#### Task " "$BACKLOG_FILE" | grep -vE "Task (DB|BACK|FRONT|AGENT|TEST|INFRA)-[0-9]{3}" | wc -l)
+fi
 if [ "$INVALID_IDS" -eq 0 ]; then
     echo "✅ Todas as tarefas têm ID válido (TIPO-NNN)"
 else
@@ -65,58 +80,99 @@ else
     MISSING_REQUIREMENTS=$((MISSING_REQUIREMENTS + 1))
 fi
 
-# Verifica tipos de tarefa válidos
-for task_type in DB BACK FRONT AGENT TEST INFRA; do
-    COUNT=$(grep -c "\- \*\*Tipo:\*\* $task_type" "$BACKLOG_FILE" || true)
-    if [ "$COUNT" -gt 0 ]; then
-        echo "✅ Tipo $task_type presente ($COUNT tarefa(s))"
-    fi
-done
+# Verifica tipos de tarefa válidos (nos arquivos individuais ou no backlog)
+if [ -d ".spec/tasks" ]; then
+    for task_type in DB BACK FRONT AGENT TEST INFRA; do
+        COUNT=$(ls .spec/tasks/$task_type-*.md 2>/dev/null | wc -l)
+        if [ "$COUNT" -gt 0 ]; then
+            echo "✅ Tipo $task_type presente ($COUNT tarefa(s))"
+        fi
+    done
+else
+    for task_type in DB BACK FRONT AGENT TEST INFRA; do
+        COUNT=$(grep -c "\- \*\*Tipo:\*\* $task_type" "$BACKLOG_FILE" || true)
+        if [ "$COUNT" -gt 0 ]; then
+            echo "✅ Tipo $task_type presente ($COUNT tarefa(s))"
+        fi
+    done
+fi
 
-# Verifica se cada tarefa tem pelo menos 3 cenários BDD
-# Procura por blocos de código Gherkin (```gherkin) e conta cenários
-BDD_BLOCKS=$(grep -c "\`\`\`gherkin" "$BACKLOG_FILE" || true)
-if [ "$BDD_BLOCKS" -ge "$TASK_COUNT" ]; then
-    echo "✅ Blocos Gherkin encontrados para cada tarefa"
-    # Conta cenários: linhas que começam com "Cenário:"
-    SCENARIO_COUNT=$(grep -c "^  Cenário:" "$BACKLOG_FILE" || true)
-    if [ "$SCENARIO_COUNT" -ge $((TASK_COUNT * 3)) ]; then
-        echo "✅ Pelo menos 3 cenários por tarefa (total $SCENARIO_COUNT cenários)"
+# Verifica BDD nos arquivos individuais de task (quando existem)
+if [ -d ".spec/tasks" ]; then
+    TOTAL_BDD_BLOCKS=0
+    for task_file in .spec/tasks/*.md; do
+        [ -f "$task_file" ] || continue
+        BLOCKS=$(grep -c '```gherkin' "$task_file" || true)
+        TOTAL_BDD_BLOCKS=$((TOTAL_BDD_BLOCKS + BLOCKS))
+    done
+    if [ "$TOTAL_BDD_BLOCKS" -ge "$TASK_COUNT" ]; then
+        echo "✅ Blocos Gherkin encontrados nas tasks individuais"
     else
-        echo "⚠️  Esperado pelo menos $((TASK_COUNT * 3)) cenários, encontrados $SCENARIO_COUNT"
+        echo "⚠️  Blocos Gherkin insuficientes nos arquivos de task"
         WARNINGS=$((WARNINGS + 1))
     fi
 else
-    echo "⚠️  Blocos Gherkin insuficientes ($BDD_BLOCKS) para o número de tarefas ($TASK_COUNT)"
+    # Fallback: verifica no backlog.md
+    BDD_BLOCKS=$(grep -c '```gherkin' "$BACKLOG_FILE" || true)
+    if [ "$BDD_BLOCKS" -ge "$TASK_COUNT" ]; then
+        echo "✅ Blocos Gherkin encontrados no backlog"
+    else
+        echo "⚠️  Blocos Gherkin insuficientes no backlog"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+fi
+
+# Verifica artefatos DDD (.spec/modules/, architecture.md, domain_rules.md)
+if [ -d ".spec/modules" ]; then
+    MODULE_COUNT=$(ls .spec/modules/*.md 2>/dev/null | wc -l)
+    if [ "$MODULE_COUNT" -ge 1 ]; then
+        echo "✅ Bounded contexts em .spec/modules/ ($MODULE_COUNT módulo(s))"
+    else
+        echo "⚠️  .spec/modules/ vazio (pode ser aceitável em projetos pequenos)"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+else
+    echo "⚠️  .spec/modules/ não encontrado (bounded contexts não foram gerados)"
     WARNINGS=$((WARNINGS + 1))
 fi
 
-# Verifica checklist de conclusão (padrão "- [ ]")
-CHECKLIST_ITEMS=$(grep -c "^  - \[ \]" "$BACKLOG_FILE" || true)
-if [ "$CHECKLIST_ITEMS" -ge $((TASK_COUNT * 8)) ]; then
-    echo "✅ Checklist de conclusão presente (mínimo 8 itens por tarefa)"
+if [ -f ".spec/architecture.md" ]; then
+    echo "✅ .spec/architecture.md presente"
 else
-    echo "⚠️  Checklist com menos de 8 itens por tarefa (esperado $((TASK_COUNT * 8)), encontrado $CHECKLIST_ITEMS)"
+    echo "⚠️  .spec/architecture.md ausente (recomendado para prompt caching)"
     WARNINGS=$((WARNINGS + 1))
 fi
 
-# Verifica se há pelo menos um item de idempotência no checklist se a tarefa for webhook/endpoint state-changing
-# (checagem simples: se aparece "Idempotência" no checklist)
-IDEMPOTENCY_MENTION=$(grep -c "Idempotência verificada" "$BACKLOG_FILE" || true)
-if [ "$IDEMPOTENCY_MENTION" -gt 0 ]; then
-    echo "✅ Idempotência mencionada nos checklists"
+if [ -f ".spec/domain_rules.md" ]; then
+    echo "✅ .spec/domain_rules.md presente"
 else
-    echo "⚠️  Nenhuma menção a 'Idempotência verificada' (pode ser aceitável se não houver webhooks)"
-    # não conta como erro obrigatório porque pode não se aplicar
+    echo "⚠️  .spec/domain_rules.md ausente (recomendado para prompt caching)"
+    WARNINGS=$((WARNINGS + 1))
 fi
 
-# Verifica dependências: formato esperado "- **Dependências:** (lista ou 'Nenhuma')"
-DEPENDENCY_LINES=$(grep -c "\- \*\*Dependências:\*\*" "$BACKLOG_FILE" || true)
-if [ "$DEPENDENCY_LINES" -ge "$TASK_COUNT" ]; then
-    echo "✅ Todas as tarefas têm campo de dependências"
+# Verifica dependências (nos arquivos individuais ou no backlog)
+if [ -d ".spec/tasks" ]; then
+    MISSING_DEPS=0
+    for task_file in .spec/tasks/*.md; do
+        [ -f "$task_file" ] || continue
+        if ! grep -q "Dependencies:" "$task_file"; then
+            MISSING_DEPS=$((MISSING_DEPS + 1))
+        fi
+    done
+    if [ "$MISSING_DEPS" -eq 0 ]; then
+        echo "✅ Todas as tarefas têm campo de dependências"
+    else
+        echo "❌ $MISSING_DEPS tarefa(s) sem campo de dependências"
+        MISSING_REQUIREMENTS=$((MISSING_REQUIREMENTS + 1))
+    fi
 else
-    echo "❌ Algumas tarefas sem campo de dependências"
-    MISSING_REQUIREMENTS=$((MISSING_REQUIREMENTS + 1))
+    DEPENDENCY_LINES=$(grep -c "\- \*\*Dependências:\*\*" "$BACKLOG_FILE" || true)
+    if [ "$DEPENDENCY_LINES" -ge "$TASK_COUNT" ]; then
+        echo "✅ Todas as tarefas têm campo de dependências"
+    else
+        echo "❌ Algumas tarefas sem campo de dependências"
+        MISSING_REQUIREMENTS=$((MISSING_REQUIREMENTS + 1))
+    fi
 fi
 
 # Verifica se há instruções de orquestração (pelo menos um comando ou script)
